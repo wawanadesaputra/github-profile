@@ -4,71 +4,49 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import id.ac.polbeng.wawansaputra.githubprofile.services.ServiceBuilder
 import id.ac.polbeng.wawansaputra.githubprofilee.helpers.Config
 import id.ac.polbeng.wawansaputra.githubprofilee.models.GithubUser
 import id.ac.polbeng.wawansaputra.githubprofilee.services.GithubUserService
-import id.ac.polbeng.wawansaputra.githubprofilee.services.ServiceBuilder
 import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
-class MainViewModel : ViewModel() {
+class MainViewModel : ViewModel(){
 
     companion object {
         val TAG: String = MainViewModel::class.java.simpleName
     }
 
-    private val _githubUser = MutableLiveData<GithubUser?>()
-    val githubUser: LiveData<GithubUser?> = _githubUser
+    private val _githubUser = MutableLiveData<GithubUser>()
+    val githubUser: LiveData<GithubUser> = _githubUser
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
     init {
-        val defaultUser = Config.DEFAULT_USER_LOGIN
-        if (defaultUser.isNullOrEmpty()) {
-            Log.e(TAG, "Login pengguna default kosong atau null")
-        } else {
-            searchUser(defaultUser)  // Mencari pengguna default saat pertama kali
-        }
+        searchUser(Config.DEFAULT_USER_LOGIN)
     }
 
-    fun searchUser(query: String) {
-        // Pastikan query tidak kosong atau null
-        if (query.isEmpty()) {
-            Log.e(TAG, "Query pencarian tidak boleh kosong")
-            return
-        }
-
+    fun searchUser(query: String){
         _isLoading.value = true
-        Log.d(TAG, "getDataUserProfileFromAPI: mulai untuk query: $query")
-
+        Log.d(TAG, "getDataUserProfileFromAPI: start...")
         val githubUserService: GithubUserService = ServiceBuilder.buildService(GithubUserService::class.java)
         val requestCall: Call<GithubUser> = githubUserService.loginUser(Config.PERSONAL_ACCESS_TOKEN, query)
-        Log.d(TAG, "URL Request: ${requestCall.request().url}")
-
-        requestCall.enqueue(object : Callback<GithubUser> {
-            override fun onResponse(call: Call<GithubUser>, response: Response<GithubUser>) {
+        requestCall.enqueue(object : retrofit2.Callback<GithubUser> {
+            override fun onResponse(call: Call<GithubUser>, response: retrofit2.Response<GithubUser>) {
                 _isLoading.value = false
-                if (response.isSuccessful) {
+                if(response.isSuccessful){
                     val result = response.body()
-                    if (result != null) {
-                        Log.d(TAG, "getDataUserFromAPI: onResponse sukses: $result")
-                        _githubUser.postValue(result)
-                    } else {
-                        Log.d(TAG, "getDataUserFromAPI: onResponse sukses tetapi body null")
-                        _githubUser.postValue(null)
-                    }
-                } else {
-                    Log.e(TAG, "getDataUserFromAPI: onResponse gagal dengan kode: ${response.code()}")
-                    _githubUser.postValue(null)
+                    Log.d(TAG, result.toString())
+                    _githubUser.postValue(result)
+                    Log.d(TAG, "getDataUserFromAPI: onResponse finish...")
+                }else{
+                    Log.d(TAG, "getDataUserFromAPI: onResponse failed...")
                 }
             }
 
             override fun onFailure(call: Call<GithubUser>, t: Throwable) {
                 _isLoading.value = false
-                Log.e(TAG, "getDataUserFromAPI: onFailure ${t.message}")
-                _githubUser.postValue(null)
+                Log.d(TAG, "getDataUserFromAPI: onFailure ${t.message}...")
             }
         })
     }
